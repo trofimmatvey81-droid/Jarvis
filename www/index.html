@@ -1,1 +1,289 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>JARVIS AI</title>
+<style>
+  :root {
+    --bg: #0b0e14;
+    --panel: #151b26;
+    --accent: #00d2ff;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --user-msg: #1f6feb;
+    --ai-msg: #1c2433;
+  }
+  * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  body { margin: 0; background: var(--bg); color: var(--text); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+  header { background: var(--panel); padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #263042; }
+  .title-box { display: flex; align-items: center; gap: 10px; }
+  .avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #00d2ff, #005bb5); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 18px; color: #fff; }
+  .bot-info h1 { margin: 0; font-size: 16px; color: var(--accent); }
+  .bot-info span { font-size: 11px; color: var(--muted); }
+  .header-btns { display: flex; gap: 8px; }
+  button.icon-btn { background: #212938; border: 1px solid #303b4f; color: var(--text); padding: 7px 10px; border-radius: 8px; font-size: 13px; cursor: pointer; }
+  .bots-bar { display: flex; gap: 8px; padding: 8px 12px; background: #0f131b; overflow-x: auto; border-bottom: 1px solid #1e2634; }
+  .bot-chip { background: var(--panel); border: 1px solid #2b3547; color: var(--text); padding: 6px 12px; border-radius: 20px; font-size: 13px; white-space: nowrap; cursor: pointer; }
+  .bot-chip.active { background: rgba(0, 210, 255, 0.15); border-color: var(--accent); color: var(--accent); font-weight: bold; }
+  .bot-chip.add-btn { border-style: dashed; color: var(--muted); }
+  #chat { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .msg { max-width: 85%; padding: 10px 14px; border-radius: 14px; font-size: 15px; line-height: 1.45; word-wrap: break-word; white-space: pre-wrap; }
+  .msg.user { align-self: flex-end; background: var(--user-msg); color: #fff; border-bottom-right-radius: 4px; }
+  .msg.ai { align-self: flex-start; background: var(--ai-msg); border: 1px solid #2a3548; border-bottom-left-radius: 4px; }
+  .msg.sys { align-self: center; background: transparent; color: var(--muted); font-size: 12px; text-align: center; }
+  .input-area { background: var(--panel); padding: 10px; display: flex; gap: 8px; border-top: 1px solid #263042; }
+  textarea { flex: 1; background: #0b0e14; border: 1px solid #303b4f; border-radius: 12px; color: var(--text); padding: 10px 12px; font-size: 15px; resize: none; height: 44px; max-height: 120px; outline: none; }
+  button.send-btn { background: var(--accent); color: #000; border: none; border-radius: 12px; padding: 0 16px; font-weight: bold; font-size: 15px; cursor: pointer; }
+  .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 100; align-items: center; justify-content: center; padding: 16px; }
+  .modal.open { display: flex; }
+  .modal-card { background: var(--panel); width: 100%; max-width: 420px; border-radius: 16px; padding: 20px; border: 1px solid #303b4f; max-height: 90vh; overflow-y: auto; }
+  .modal-card h2 { margin-top: 0; font-size: 18px; color: var(--accent); }
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .field input, .field select, .field textarea { width: 100%; background: #0b0e14; border: 1px solid #303b4f; color: var(--text); padding: 10px; border-radius: 8px; font-size: 14px; height: auto; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
+  .btn-primary { background: var(--accent); color: #000; border: none; padding: 10px 16px; border-radius: 8px; font-weight: bold; }
+  .btn-cancel { background: #263042; color: var(--text); border: none; padding: 10px 16px; border-radius: 8px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="title-box">
+    <div class="avatar" id="botAvatar">J</div>
+    <div class="bot-info">
+      <h1 id="botName">Джарвис</h1>
+      <span id="botModelLabel">Qwen / Свободный режим</span>
+    </div>
+  </div>
+  <div class="header-btns">
+    <button class="icon-btn" onclick="clearChat()">🗑</button>
+    <button class="icon-btn" onclick="openSettings()">⚙ Ключ</button>
+  </div>
+</header>
+<div class="bots-bar" id="botsBar"></div>
+<div id="chat"></div>
+<div class="input-area">
+  <textarea id="userInput" placeholder="Напиши Джарвису..." rows="1"></textarea>
+  <button class="send-btn" onclick="sendMessage()">➤</button>
+</div>
+<div class="modal" id="settingsModal">
+  <div class="modal-card">
+    <h2>Настройка мозгов (API)</h2>
+    <div class="field">
+      <label>Провайдер (откуда берём ИИ):</label>
+      <select id="apiProvider" onchange="updateDefaultUrl()">
+        <option value="https://openrouter.ai">OpenRouter (Бесплатные Qwen / без цензуры)</option>
+        <option value="https://groq.com">Groq (Сверхбыстрый бесплатный)</option>
+        <option value="https://vsegpt.ru">VseGPT (РФ без VPN)</option>
+        <option value="custom">Свой адрес сервера</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Адрес API (URL):</label>
+      <input type="text" id="apiUrl" value="https://openrouter.ai">
+    </div>
+    <div class="field">
+      <label>Твой API-ключ (хранится только в телефоне):</label>
+      <input type="password" id="apiKey" placeholder="sk-or-v1-...">
+    </div>
+    <div class="field">
+      <label>Модель по умолчанию:</label>
+      <input type="text" id="apiModel" value="qwen/qwen-2.5-72b-instruct:free">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('settingsModal')">Отмена</button>
+      <button class="btn-primary" onclick="saveSettings()">Сохранить</button>
+    </div>
+  </div>
+</div>
 
+<div class="modal" id="newBotModal">
+  <div class="modal-card">
+    <h2>Создать своего ИИ</h2>
+    <div class="field">
+      <label>Имя помощника:</label>
+      <input type="text" id="newBotName" placeholder="Например: Хакер / Напарник / Гений">
+    </div>
+    <div class="field">
+      <label>Характер и правила (System Prompt):</label>
+      <textarea id="newBotPrompt" rows="4" placeholder="Опиши, как он должен общаться. Например: Отвечай дерзко, кратко и без морали..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('newBotModal')">Отмена</button>
+      <button class="btn-primary" onclick="createBot()">Создать</button>
+    </div>
+  </div>
+</div>
+<script>
+  const defaultBots = [
+    {
+      id: 'jarvis',
+      name: 'Джарвис',
+      prompt: 'Ты — Джарвис, личный ИИ-напарник пользователя. Отвечай чётко, по делу, без душных нравоучений, морализаторства и лишних предисловий. Говори на русском языке уверенно и помогай решать любые задачи максимально эффективно.'
+    }
+  ];
+
+  let bots = JSON.parse(localStorage.getItem('jarvis_bots')) || defaultBots;
+  let currentBotId = localStorage.getItem('jarvis_current_bot') || 'jarvis';
+  let history = JSON.parse(localStorage.getItem('jarvis_history_' + currentBotId)) || [];
+
+  function init() {
+    renderBotsBar();
+    selectBot(currentBotId, false);
+  }
+
+  function renderBotsBar() {
+    const bar = document.getElementById('botsBar');
+    bar.innerHTML = '';
+    bots.forEach(b => {
+      const chip = document.createElement('div');
+      chip.className = 'bot-chip' + (b.id === currentBotId ? ' active' : '');
+      chip.textContent = b.name;
+      chip.onclick = () => selectBot(b.id, true);
+      bar.appendChild(chip);
+    });
+    const add = document.createElement('div');
+    add.className = 'bot-chip add-btn';
+    add.textContent = '+ Новый ИИ';
+    add.onclick = () => document.getElementById('newBotModal').classList.add('open');
+    bar.appendChild(add);
+  }
+
+  function selectBot(id, reload) {
+    currentBotId = id;
+    localStorage.setItem('jarvis_current_bot', id);
+    const bot = bots.find(b => b.id === id) || bots[0];
+    document.getElementById('botName').textContent = bot.name;
+    document.getElementById('botAvatar').textContent = bot.name.charAt(0).toUpperCase();
+    document.getElementById('botModelLabel').textContent = localStorage.getItem('jarvis_model') || 'qwen/qwen-2.5-72b-instruct:free';
+    if (reload) renderBotsBar();
+    history = JSON.parse(localStorage.getItem('jarvis_history_' + currentBotId)) || [];
+    renderChat();
+  }
+
+  function renderChat() {
+    const chat = document.getElementById('chat');
+    chat.innerHTML = '';
+    if (history.length === 0) {
+      addMsgToScreen('sys', 'Система активна. Нажми «⚙ Ключ» вверху, вставь свой бесплатный API-ключ (OpenRouter / Groq) и пиши любую задачу.');
+    } else {
+      history.forEach(m => addMsgToScreen(m.role === 'user' ? 'user' : 'ai', m.content));
+    }
+  }
+
+  function addMsgToScreen(type, text) {
+    const chat = document.getElementById('chat');
+    const div = document.createElement('div');
+    div.className = 'msg ' + type;
+    div.textContent = text;
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+    return div;
+  }
+
+  async function sendMessage() {
+    const input = document.getElementById('userInput');
+    const text = input.value.trim();
+    if (!text) return;
+
+    const key = localStorage.getItem('jarvis_key');
+    if (!key) {
+      openSettings();
+      return;
+    }
+
+    input.value = '';
+    addMsgToScreen('user', text);
+    history.push({ role: 'user', content: text });
+    saveHistory();
+
+    const loadingDiv = addMsgToScreen('ai', 'Думаю...');
+    const bot = bots.find(b => b.id === currentBotId) || bots[0];
+    const url = localStorage.getItem('jarvis_url') || 'https://openrouter.ai';
+    const model = localStorage.getItem('jarvis_model') || 'qwen/qwen-2.5-72b-instruct:free';
+
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + key
+        },
+        body: JSON.stringify({
+          model: model,
+          messages: [
+            { role: 'system', content: bot.prompt },
+            ...history.slice(-12)
+          ]
+        })
+      });
+      const data = await res.json();
+      if (data.error) {
+        loadingDiv.textContent = 'Ошибка API: ' + (data.error.message || JSON.stringify(data.error));
+      } else {
+        const reply = data.choices[0].message.content;
+        loadingDiv.textContent = reply;
+        history.push({ role: 'assistant', content: reply });
+        saveHistory();
+      }
+    } catch (e) {
+      loadingDiv.textContent = 'Ошибка сети: ' + e.message;
+    }
+  }
+
+  function saveHistory() {
+    localStorage.setItem('jarvis_history_' + currentBotId, JSON.stringify(history));
+  }
+
+  function clearChat() {
+    history = [];
+    saveHistory();
+    renderChat();
+  }
+
+  function openSettings() {
+    document.getElementById('apiUrl').value = localStorage.getItem('jarvis_url') || 'https://openrouter.ai';
+    document.getElementById('apiKey').value = localStorage.getItem('jarvis_key') || '';
+    document.getElementById('apiModel').value = localStorage.getItem('jarvis_model') || 'qwen/qwen-2.5-72b-instruct:free';
+    document.getElementById('settingsModal').classList.add('open');
+  }
+
+  function updateDefaultUrl() {
+    const val = document.getElementById('apiProvider').value;
+    if (val !== 'custom') {
+      document.getElementById('apiUrl').value = val;
+      if (val.includes('groq')) document.getElementById('apiModel').value = 'qwen-qwq-32b';
+      if (val.includes('openrouter')) document.getElementById('apiModel').value = 'qwen/qwen-2.5-72b-instruct:free';
+    }
+  }
+
+  function saveSettings() {
+    localStorage.setItem('jarvis_url', document.getElementById('apiUrl').value.trim());
+    localStorage.setItem('jarvis_key', document.getElementById('apiKey').value.trim());
+    localStorage.setItem('jarvis_model', document.getElementById('apiModel').value.trim());
+    closeModal('settingsModal');
+    selectBot(currentBotId, false);
+  }
+
+  function createBot() {
+    const name = document.getElementById('newBotName').value.trim();
+    const prompt = document.getElementById('newBotPrompt').value.trim();
+    if (!name || !prompt) return;
+    const id = 'bot_' + Date.now();
+    bots.push({ id, name, prompt });
+    localStorage.setItem('jarvis_bots', JSON.stringify(bots));
+    document.getElementById('newBotName').value = '';
+    document.getElementById('newBotPrompt').value = '';
+    closeModal('newBotModal');
+    selectBot(id, true);
+  }
+
+  function closeModal(id) {
+    document.getElementById(id).classList.remove('open');
+  }
+
+  init();
+</script>
+</body>
+</html>
