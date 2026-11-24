@@ -1,4 +1,4 @@
-name: Build Jarvis APK
+name: Build Yarvis APK
 
 on:
   push:
@@ -20,12 +20,19 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      - name: Prepare Web Files
+        run: |
+          mkdir -p www
+          if [ -f "index.html" ]; then cp index.html www/; fi
+          if [ -f "app.js" ]; then cp app.js www/; fi
+
       - name: Build APK
         run: |
           npm init -y
           npm install @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6 @capacitor/assets
-          npx cap init Jarvis com.jarvis.ai --web-dir www
+          npx cap init Yarvis com.yarvis.ai --web-dir www
           npx cap add android
+          sed -i 's/<uses-permission android:name="android.permission.INTERNET" \/>/<uses-permission android:name="android.permission.INTERNET" \/>\n    <uses-permission android:name="android.permission.CAMERA" \/>\n    <uses-permission android:name="android.permission.RECORD_AUDIO" \/>\n    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" \/>/' android/app/src/main/AndroidManifest.xml
           npx capacitor-assets generate --android || true
           npx cap sync android
           cd android
@@ -35,5 +42,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Jarvis-APK
+          name: Yarvis-APK
           path: android/app/build/outputs/apk/debug/app-debug.apk
