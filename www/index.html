@@ -1,697 +1,207 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>JARVIS AI</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>YARVIS AI</title>
   <style>
     :root {
-      --bg: #141416;
-      --bg-sidebar: #1a1a1e;
-      --bg-card: #1f1f24;
-      --bg-input: #232329;
-      --border: #2e2e36;
-      --text: #f3f4f6;
-      --text-muted: #9ca3af;
+      --bg: #0f1117;
+      --sidebar: #13161f;
+      --surface: #1a1e29;
+      --border: #282e3d;
+      --text: #eceef2;
+      --muted: #8b949e;
       --accent: #4d6bfe;
-      --accent-soft: rgba(77, 107, 254, 0.18);
-      --user-bubble: #2b2c34;
+      --accent-soft: rgba(77, 107, 254, 0.16);
+      --danger: #e5484d;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-    html, body {
-      height: 100%;
-      background: var(--bg);
-      color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      overflow: hidden;
-    }
-    .app { display: flex; height: 100%; width: 100%; position: relative; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
 
-    /* Sidebar */
-    .sidebar-overlay {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.6);
-      z-index: 40; display: none;
+    /* Боковая панель в стиле DeepSeek */
+    aside {
+      width: 260px; background: var(--sidebar); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; transition: transform 0.25s ease; z-index: 50;
     }
-    .sidebar-overlay.open { display: block; }
-    .sidebar {
-      position: fixed; top: 0; bottom: 0; left: 0; width: 280px;
-      background: var(--bg-sidebar); border-right: 1px solid var(--border);
-      z-index: 50; transform: translateX(-100%); transition: transform 0.22s ease;
-      display: flex; flex-direction: column; padding: 14px;
+    .side-top { padding: 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    .brand { font-weight: 800; font-size: 18px; letter-spacing: 0.5px; color: #fff; }
+    .new-chat-btn {
+      margin: 12px 16px; padding: 10px 14px; background: var(--accent-soft); border: 1px solid var(--accent);
+      color: #fff; border-radius: 12px; font-weight: 600; cursor: pointer; text-align: left;
     }
-    .sidebar.open { transform: translateX(0); }
-    .sb-top { display: flex; gap: 8px; margin-bottom: 12px; }
-    .sb-search {
-      flex: 1; background: var(--bg-input); border: 1px solid var(--border);
-      color: var(--text); padding: 9px 12px; border-radius: 12px; font-size: 14px; outline: none;
-    }
-    .sb-new {
-      background: var(--accent); color: #fff; border: none; border-radius: 12px;
-      padding: 0 14px; font-size: 18px; font-weight: 600; cursor: pointer;
-    }
-    .sb-label {
-      font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
-      color: var(--text-muted); margin: 10px 4px 6px;
-    }
-    .chat-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+    .chat-list { flex: 1; overflow-y: auto; padding: 0 12px; display: flex; flex-direction: column; gap: 4px; }
     .chat-item {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 10px 12px; border-radius: 10px; cursor: pointer; font-size: 14px;
-      color: var(--text); gap: 6px;
+      padding: 10px 12px; border-radius: 10px; font-size: 14px; color: var(--muted);
+      cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    .chat-item.active { background: var(--bg-input); font-weight: 500; }
-    .chat-title { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .chat-actions { display: flex; gap: 6px; opacity: 0.75; }
-    .chat-actions button {
-      background: none; border: none; color: var(--text-muted); font-size: 14px; cursor: pointer; padding: 2px;
-    }
-    .sb-footer {
-      border-top: 1px solid var(--border); padding-top: 12px; margin-top: 8px;
-      display: flex; align-items: center; justify-content: space-between;
-    }
-    .profile { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 500; }
-    .profile-badge {
-      width: 32px; height: 32px; border-radius: 50%; background: var(--accent);
-      display: flex; align-items: center; justify-content: center; font-weight: 700;
-    }
-    .cfg-btn {
-      background: var(--bg-input); border: 1px solid var(--border); color: var(--text);
-      padding: 6px 10px; border-radius: 10px; font-size: 13px; cursor: pointer;
+    .chat-item.active, .chat-item:hover { background: var(--surface); color: var(--text); }
+    .side-bottom { padding: 12px 16px; border-top: 1px solid var(--border); }
+    .settings-btn {
+      width: 100%; padding: 10px; background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: 10px; cursor: pointer; font-size: 14px; text-align: left;
     }
 
-    /* Main */
-    .main { flex: 1; display: flex; flex-direction: column; height: 100%; width: 100%; }
-    .topbar {
-      height: 54px; padding: 0 14px; display: flex; align-items: center; justify-content: space-between;
-      border-bottom: 1px solid rgba(255,255,255,0.04); flex-shrink: 0;
+    /* Основная область */
+    main { flex: 1; display: flex; flex-direction: column; width: 100%; position: relative; }
+    header {
+      padding: 12px 16px; background: var(--bg); border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center;
     }
     .icon-btn {
-      background: none; border: none; color: var(--text); font-size: 21px;
-      width: 38px; height: 38px; border-radius: 10px; cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
+      background: var(--surface); border: 1px solid var(--border); color: var(--text);
+      padding: 7px 11px; border-radius: 10px; cursor: pointer; font-size: 14px;
     }
-    .icon-btn:active { background: var(--bg-input); }
-    .brand-title { font-size: 15px; font-weight: 600; letter-spacing: 0.04em; color: var(--text); }
 
-    /* Chat area */
-    .messages {
-      flex: 1; overflow-y: auto; padding: 16px 14px 20px;
-      display: flex; flex-direction: column; gap: 16px;
-    }
-    .welcome {
-      margin: auto; text-align: center; max-width: 320px; padding: 20px 10px;
-      display: flex; flex-direction: column; align-items: center; gap: 14px;
-    }
-    .welcome-ava {
-      width: 72px; height: 72px; border-radius: 50%; object-fit: cover;
-      border: 2px solid var(--accent); box-shadow: 0 0 24px rgba(77, 107, 254, 0.35);
-      background: #1e2235;
-    }
-    .welcome h1 { font-size: 20px; font-weight: 600; line-height: 1.35; }
-    .welcome p { font-size: 13px; color: var(--text-muted); }
+    /* Лента сообщений */
+    #chat { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+    .msg { max-width: 88%; padding: 12px 16px; border-radius: 16px; line-height: 1.55; font-size: 15px; white-space: pre-wrap; word-wrap: break-word; }
+    .user { align-self: flex-end; background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
+    .ai { align-self: flex-start; background: var(--surface); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+    .msg img { max-width: 100%; border-radius: 10px; margin-bottom: 8px; display: block; }
 
-    .msg { display: flex; gap: 10px; max-width: 100%; }
-    .msg.user { justify-content: flex-end; }
-    .msg-ava {
-      width: 30px; height: 30px; border-radius: 50%; object-fit: cover;
-      border: 1px solid var(--border); flex-shrink: 0; margin-top: 2px; background: #1e2235;
+    /* Блок размышлений DeepSeek */
+    details.think {
+      background: rgba(255,255,255,0.03); border-left: 2px solid var(--muted);
+      padding: 8px 10px; margin-bottom: 8px; border-radius: 6px; font-size: 13px; color: var(--muted);
     }
-    .msg-body { max-width: 84%; display: flex; flex-direction: column; gap: 6px; }
-    .msg.user .msg-body { align-items: flex-end; }
-    .bubble {
-      padding: 11px 14px; border-radius: 16px; font-size: 15px; line-height: 1.5;
-      white-space: pre-wrap; word-wrap: break-word;
-    }
-    .msg.user .bubble { background: var(--user-bubble); border-bottom-right-radius: 4px; }
-    .msg.assistant .bubble { background: transparent; padding: 2px 0; }
-    .msg-img {
-      max-width: 210px; max-height: 210px; border-radius: 12px;
-      border: 1px solid var(--border); object-fit: cover;
-    }
-    .msg-tools { display: flex; gap: 8px; margin-top: 2px; }
-    .tool-chip {
-      background: var(--bg-card); border: 1px solid var(--border); color: var(--text-muted);
-      font-size: 12px; padding: 4px 10px; border-radius: 8px; cursor: pointer;
-    }
-    .tool-chip:active { color: var(--text); border-color: var(--accent); }
+    details.think summary { cursor: pointer; font-weight: 600; }
 
-    /* Input Capsule */
-    .composer-wrap { padding: 8px 12px 14px; background: var(--bg); flex-shrink: 0; }
-    .capsule {
-      background: var(--bg-input); border: 1px solid var(--border);
-      border-radius: 22px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px;
+    /* Превью фото перед отправкой */
+    #preview-bar {
+      display: none; padding: 8px 16px; background: var(--surface); border-top: 1px solid var(--border);
+      align-items: center; gap: 10px;
     }
-    .img-preview-box {
-      display: none; align-items: center; gap: 10px;
-      background: var(--bg-card); padding: 6px 10px; border-radius: 12px; width: fit-content;
+    #preview-img { height: 54px; border-radius: 8px; border: 1px solid var(--border); }
+
+    /* Кнопки режимов */
+    .modes { display: flex; gap: 8px; padding: 8px 16px 4px; overflow-x: auto; }
+    .chip {
+      padding: 6px 12px; border-radius: 20px; font-size: 13px; border: 1px solid var(--border);
+      background: var(--surface); color: var(--muted); cursor: pointer; white-space: nowrap;
     }
-    .img-preview-box.show { display: flex; }
-    .img-preview-box img { width: 46px; height: 46px; border-radius: 8px; object-fit: cover; }
-    .img-remove {
-      background: #374151; color: #fff; border: none; width: 22px; height: 22px;
-      border-radius: 50%; font-size: 13px; cursor: pointer;
-    }
+    .chip.active { background: var(--accent-soft); border-color: var(--accent); color: #fff; }
+
+    /* Панель ввода */
+    .input-box { padding: 8px 16px 14px; display: flex; gap: 8px; align-items: flex-end; }
     textarea {
-      width: 100%; background: transparent; border: none; color: var(--text);
-      font-size: 15px; line-height: 1.4; resize: none; outline: none;
-      max-height: 120px; min-height: 24px; font-family: inherit;
+      flex: 1; background: var(--surface); border: 1px solid var(--border); color: var(--text);
+      border-radius: 16px; padding: 11px 14px; font-size: 15px; resize: none; max-height: 110px; outline: none;
     }
-    .capsule-bar { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
-    .pills { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-    .pill {
-      background: var(--bg-card); border: 1px solid var(--border); color: var(--text-muted);
-      padding: 6px 11px; border-radius: 999px; font-size: 12.5px; font-weight: 500;
-      cursor: pointer; display: flex; align-items: center; gap: 5px;
+    .round-btn {
+      width: 42px; height: 42px; border-radius: 50%; border: 1px solid var(--border);
+      background: var(--surface); color: var(--text); font-size: 17px; cursor: pointer; flex-shrink: 0;
     }
-    .pill.active {
-      background: var(--accent-soft); border-color: var(--accent); color: #93c5fd;
-    }
-    .right-btns { display: flex; align-items: center; gap: 8px; }
-    .cam-btn {
-      background: var(--bg-card); border: 1px solid var(--border); color: var(--text);
-      width: 34px; height: 34px; border-radius: 50%; font-size: 16px; cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .send-btn {
-      background: var(--accent); border: none; color: #fff;
-      width: 34px; height: 34px; border-radius: 50%; font-size: 17px; font-weight: 700;
-      cursor: pointer; display: flex; align-items: center; justify-content: center;
-    }
-    .send-btn:disabled { opacity: 0.45; }
+    .send-btn { background: var(--accent); border: none; color: #fff; }
 
-    /* Modal */
+    /* Модальные окна */
     .modal {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.72);
-      z-index: 60; display: none; align-items: center; justify-content: center; padding: 16px;
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+      justify-content: center; align-items: center; padding: 16px; z-index: 100;
     }
-    .modal.open { display: flex; }
     .modal-card {
-      background: var(--bg-sidebar); border: 1px solid var(--border);
-      border-radius: 18px; width: 100%; max-width: 380px; padding: 18px;
-      display: flex; flex-direction: column; gap: 12px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+      padding: 20px; width: 100%; max-width: 420px;
     }
-    .modal-card h2 { font-size: 17px; }
-    .field { display: flex; flex-direction: column; gap: 5px; }
-    .field label { font-size: 12px; color: var(--text-muted); }
-    .field input, .field textarea {
-      background: var(--bg-input); border: 1px solid var(--border);
-      color: var(--text); padding: 9px 11px; border-radius: 10px; font-size: 13.5px;
+    .modal-card h3 { margin-bottom: 12px; }
+    .modal-card label { display: block; font-size: 13px; color: var(--muted); margin-top: 10px; }
+    .modal-card input, .modal-card textarea {
+      width: 100%; padding: 10px; margin-top: 6px; background: var(--bg);
+      border: 1px solid var(--border); color: #fff; border-radius: 10px;
     }
-    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
-    .btn-sec {
-      background: var(--bg-input); border: 1px solid var(--border); color: var(--text);
-      padding: 8px 14px; border-radius: 10px; cursor: pointer;
-    }
-    .btn-pri {
-      background: var(--accent); border: none; color: #fff;
-      padding: 8px 16px; border-radius: 10px; font-weight: 600; cursor: pointer;
+    .modal-actions { display: flex; gap: 10px; margin-top: 16px; }
+    .btn-primary { flex: 1; padding: 11px; background: var(--accent); border: none; color: #fff; border-radius: 10px; font-weight: 600; cursor: pointer; }
+    .btn-sec { flex: 1; padding: 11px; background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 10px; cursor: pointer; }
+
+    /* Видео с камеры */
+    video { width: 100%; border-radius: 12px; background: #000; margin-bottom: 12px; max-height: 300px; object-fit: cover; }
+
+    @media (max-width: 768px) {
+      aside { position: fixed; top: 0; bottom: 0; left: 0; transform: translateX(-100%); }
+      aside.open { transform: translateX(0); }
     }
   </style>
 </head>
 <body>
-<div class="app">
-  <div class="sidebar-overlay" id="overlay"></div>
-  <aside class="sidebar" id="sidebar">
-    <div class="sb-top">
-      <input type="text" class="sb-search" id="searchChats" placeholder="Поиск по чатам..." />
-      <button type="button" class="sb-new" id="sbNewBtn" title="Новый чат">＋</button>
+
+  <!-- Боковое меню -->
+  <aside id="sidebar">
+    <div class="side-top">
+      <span class="brand">YARVIS AI</span>
+      <button class="icon-btn" onclick="toggleSidebar()">✕</button>
     </div>
-    <div id="pinnedSection" style="display:none;">
-      <div class="sb-label">Закреплено</div>
-      <div class="chat-list" id="pinnedList"></div>
-    </div>
-    <div class="sb-label">История чатов</div>
-    <div class="chat-list" id="historyList"></div>
-    <div class="sb-footer">
-      <div class="profile">
-        <div class="profile-badge">M</div>
-        <span>Matvey</span>
-      </div>
-      <button type="button" class="cfg-btn" id="openCfgBtn">⚙ Настройки</button>
+    <button class="new-chat-btn" onclick="createNewChat()">＋ Новый чат</button>
+    <div class="chat-list" id="chat-list"></div>
+    <div class="side-bottom">
+      <button class="settings-btn" onclick="openSettings()">⚙ Настройки YARVIS</button>
     </div>
   </aside>
 
-  <main class="main">
-    <header class="topbar">
-      <button type="button" class="icon-btn" id="menuBtn" aria-label="Меню">☰</button>
-      <div class="brand-title">JARVIS</div>
-      <button type="button" class="icon-btn" id="newChatBtn" aria-label="Новый чат">＋</button>
+  <!-- Главный экран -->
+  <main>
+    <header>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <button class="icon-btn" onclick="toggleSidebar()">☰</button>
+        <span style="font-weight:700;">YARVIS</span>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="icon-btn" id="tts-toggle" onclick="toggleTTS()" title="Озвучка ответов">🔊</button>
+        <button class="icon-btn" onclick="openLiveCamera()">📹 Эфир</button>
+      </div>
     </header>
 
-    <section class="messages" id="messages"></section>
+    <div id="chat"></div>
 
-    <footer class="composer-wrap">
-      <div class="capsule">
-        <div class="img-preview-box" id="imgPreviewBox">
-          <img id="imgPreview" src="" alt="Фото" />
-          <button type="button" class="img-remove" id="imgRemoveBtn">✕</button>
-        </div>
-        <textarea id="promptInput" rows="1" placeholder="Спросите Джарвиса, сэр..."></textarea>
-        <div class="capsule-bar">
-          <div class="pills">
-            <button type="button" class="pill" id="reasonPill">⚛ Рассуждение</button>
-            <button type="button" class="pill" id="searchPill">🌐 Поиск</button>
-          </div>
-          <div class="right-btns">
-            <input type="file" id="cameraInput" accept="image/*" style="display:none;" />
-            <button type="button" class="cam-btn" id="camBtn" title="Камера или фото">📷</button>
-            <button type="button" class="send-btn" id="sendBtn" title="Отправить">↑</button>
-          </div>
-        </div>
-      </div>
-    </footer>
+    <!-- Превью прикреплённого фото -->
+    <div id="preview-bar">
+      <img id="preview-img" src="" alt="Фото">
+      <span style="font-size:13px; color:var(--muted); flex:1;">Фото готово к отправке</span>
+      <button class="icon-btn" onclick="clearImage()">✕</button>
+    </div>
+
+    <!-- Режимы DeepSeek + РП -->
+    <div class="modes">
+      <button class="chip" id="btn-think" onclick="toggleMode('think')">⚛ Рассуждение</button>
+      <button class="chip active" id="btn-web" onclick="toggleMode('web')">🌐 Поиск</button>
+      <button class="chip" id="btn-rp" onclick="toggleMode('rp')">🎭 Литературный РП</button>
+    </div>
+
+    <!-- Поле ввода + камера + микрофон -->
+    <div class="input-box">
+      <button class="round-btn" onclick="openCameraSnap()" title="Сделать фото">📷</button>
+      <input type="file" id="file-input" accept="image/*" capture="environment" style="display:none" onchange="handleFileSelect(event)">
+      <button class="round-btn" id="mic-btn" onclick="startVoice()" title="Голосовой ввод">🎤</button>
+      <textarea id="prompt" rows="1" placeholder="Напишите или спросите Ярвиса..."></textarea>
+      <button class="round-btn send-btn" onclick="sendMessage()">↑</button>
+    </div>
   </main>
-</div>
 
-<div class="modal" id="cfgModal">
-  <div class="modal-card">
-    <h2>Настройки JARVIS</h2>
-    <div class="field">
+  <!-- Модалка настроек -->
+  <div class="modal" id="settings-modal">
+    <div class="modal-card">
+      <h3>Настройки YARVIS</h3>
       <label>Адрес сервера (Cloudflare Worker)</label>
-      <input type="text" id="cfgUrl" />
-    </div>
-    <div class="field">
+      <input type="text" id="worker-url" placeholder="https://workers.dev">
       <label>Характер и инструкции</label>
-      <textarea id="cfgSys" rows="3"></textarea>
-    </div>
-    <div class="modal-actions">
-      <button type="button" class="btn-sec" id="cfgCancel">Отмена</button>
-      <button type="button" class="btn-pri" id="cfgSave">Сохранить</button>
+      <textarea id="system-prompt" rows="4" placeholder="Дополнительные инструкции для Ярвиса..."></textarea>
+      <div class="modal-actions">
+        <button class="btn-sec" onclick="closeModal('settings-modal')">Отмена</button>
+        <button class="btn-primary" onclick="saveSettings()">Сохранить</button>
+      </div>
     </div>
   </div>
-</div>
 
-<script>
-(function() {
-  var DEFAULT_URL = "https://jarvis-brain.trofimmatvey81.workers.dev";
-  var DEFAULT_SYS = "Ты — Джарвис, персональный ИИ-ассистент. Обращайся к пользователю «сэр». Отвечай чётко, по делу, на русском языке. Помогай с учёбой, химией, биологией и любыми творческими задачами.";
+  <!-- Модалка живой камеры ("показывать что творится сейчас на деле") -->
+  <div class="modal" id="camera-modal">
+    <div class="modal-card">
+      <h3 id="cam-title">📹 Камера YARVIS</h3>
+      <video id="video-feed" autoplay playsinline></video>
+      <canvas id="snap-canvas" style="display:none;"></canvas>
+      <p id="live-status" style="font-size:13px; color:var(--muted); margin-bottom:12px;">Наведите камеру на объект или обстановку.</p>
+      <div class="modal-actions">
+        <button class="btn-sec" onclick="closeCamera()">Закрыть</button>
+        <button class="btn-primary" id="cam-action-btn" onclick="captureAndAnalyze()">Показать Ярвису</button>
+      </div>
+    </div>
+  </div>
 
-  var state = {
-    chats: [],
-    currentId: null,
-    deepThink: false,
-    webSearch: false,
-    pendingImage: "",
-    isSending: false,
-    serverUrl: localStorage.getItem("jarvis_url") || DEFAULT_URL,
-    sysPrompt: localStorage.getItem("jarvis_sys") || DEFAULT_SYS
-  };
-
-  try {
-    var raw = localStorage.getItem("jarvis_chats_v2");
-    if (raw) state.chats = JSON.parse(raw);
-  } catch (e) {
-    state.chats = [];
-  }
-
-  function saveChats() {
-    try {
-      localStorage.setItem("jarvis_chats_v2", JSON.stringify(state.chats));
-    } catch (e) {}
-  }
-
-  function createNewChat() {
-    var id = "chat_" + Date.now();
-    var chat = { id: id, title: "Новый чат", pinned: false, messages: [] };
-    state.chats.unshift(chat);
-    state.currentId = id;
-    saveChats();
-    renderAll();
-  }
-
-  function getCurrentChat() {
-    for (var i = 0; i < state.chats.length; i++) {
-      if (state.chats[i].id === state.currentId) return state.chats[i];
-    }
-    return null;
-  }
-
-  function escapeHtml(str) {
-    return String(str)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
-  }
-
-  function renderSidebar() {
-    var q = (document.getElementById("searchChats").value || "").toLowerCase();
-    var pinnedList = document.getElementById("pinnedList");
-    var historyList = document.getElementById("historyList");
-    var pinnedSec = document.getElementById("pinnedSection");
-    pinnedList.innerHTML = "";
-    historyList.innerHTML = "";
-    var pinnedCount = 0;
-
-    state.chats.forEach(function(c) {
-      if (q && c.title.toLowerCase().indexOf(q) === -1) return;
-      var item = document.createElement("div");
-      item.className = "chat-item" + (c.id === state.currentId ? " active" : "");
-
-      var titleSpan = document.createElement("span");
-      titleSpan.className = "chat-title";
-      titleSpan.textContent = c.title;
-      titleSpan.onclick = function() {
-        state.currentId = c.id;
-        closeSidebar();
-        renderAll();
-      };
-
-      var acts = document.createElement("div");
-      acts.className = "chat-actions";
-
-      var pinBtn = document.createElement("button");
-      pinBtn.type = "button";
-      pinBtn.textContent = c.pinned ? "★" : "☆";
-      pinBtn.onclick = function(ev) {
-        ev.stopPropagation();
-        c.pinned = !c.pinned;
-        saveChats();
-        renderSidebar();
-      };
-
-      var delBtn = document.createElement("button");
-      delBtn.type = "button";
-      delBtn.textContent = "✕";
-      delBtn.onclick = function(ev) {
-        ev.stopPropagation();
-        state.chats = state.chats.filter(function(x) { return x.id !== c.id; });
-        if (state.currentId === c.id) {
-          if (state.chats.length > 0) state.currentId = state.chats[0].id;
-          else createNewChat();
-        }
-        saveChats();
-        renderAll();
-      };
-
-      acts.appendChild(pinBtn);
-      acts.appendChild(delBtn);
-      item.appendChild(titleSpan);
-      item.appendChild(acts);
-
-      if (c.pinned) {
-        pinnedList.appendChild(item);
-        pinnedCount++;
-      } else {
-        historyList.appendChild(item);
-      }
-    });
-
-    pinnedSec.style.display = pinnedCount > 0 ? "block" : "none";
-  }
-
-  function renderMessages() {
-    var box = document.getElementById("messages");
-    var chat = getCurrentChat();
-    box.innerHTML = "";
-
-    if (!chat || chat.messages.length === 0) {
-      box.innerHTML =
-        '<div class="welcome">' +
-          '<img class="welcome-ava" src="avatar.png" onerror="this.style.display=\'none\'" alt="JARVIS" />' +
-          '<h1>Здравствуйте, сэр.<br/>Чем могу помочь?</h1>' +
-          '<p>Готов к работе: быстрый ответ, рассуждения 70B, поиск в сети и разбор фото.</p>' +
-        '</div>';
-      return;
-    }
-
-    chat.messages.forEach(function(m, idx) {
-      var row = document.createElement("div");
-      row.className = "msg " + m.role;
-
-      if (m.role === "assistant") {
-        var ava = document.createElement("img");
-        ava.className = "msg-ava";
-        ava.src = "avatar.png";
-        ava.onerror = function() { this.style.display = "none"; };
-        row.appendChild(ava);
-      }
-
-      var body = document.createElement("div");
-      body.className = "msg-body";
-
-      if (m.image) {
-        var img = document.createElement("img");
-        img.className = "msg-img";
-        img.src = m.image;
-        body.appendChild(img);
-      }
-
-      var bubble = document.createElement("div");
-      bubble.className = "bubble";
-      bubble.innerHTML = escapeHtml(m.content);
-      body.appendChild(bubble);
-
-      if (m.role === "assistant" && !state.isSending) {
-        var tools = document.createElement("div");
-        tools.className = "msg-tools";
-
-        var copyBtn = document.createElement("button");
-        copyBtn.type = "button";
-        copyBtn.className = "tool-chip";
-        copyBtn.textContent = "📋 Копировать";
-        copyBtn.onclick = function() {
-          if (navigator.clipboard) navigator.clipboard.writeText(m.content);
-          copyBtn.textContent = "✓ Скопировано";
-          setTimeout(function() { copyBtn.textContent = "📋 Копировать"; }, 1200);
-        };
-        tools.appendChild(copyBtn);
-
-        if (idx === chat.messages.length - 1) {
-          var regenBtn = document.createElement("button");
-          regenBtn.type = "button";
-          regenBtn.className = "tool-chip";
-          regenBtn.textContent = "↻ Заново";
-          regenBtn.onclick = function() { regenerateLast(); };
-          tools.appendChild(regenBtn);
-        }
-
-        body.appendChild(tools);
-      }
-
-      row.appendChild(body);
-      box.appendChild(row);
-    });
-
-    box.scrollTop = box.scrollHeight;
-  }
-
-  function renderAll() {
-    renderSidebar();
-    renderMessages();
-  }
-
-  function openSidebar() {
-    document.getElementById("sidebar").classList.add("open");
-    document.getElementById("overlay").classList.add("open");
-  }
-
-  function closeSidebar() {
-    document.getElementById("sidebar").classList.remove("open");
-    document.getElementById("overlay").classList.remove("open");
-  }
-
-  function compressImage(file, callback) {
-    var reader = new FileReader();
-    reader.onload = function(e) {
-      var img = new Image();
-      img.onload = function() {
-        var canvas = document.createElement("canvas");
-        var maxSide = 900;
-        var w = img.width;
-        var h = img.height;
-        if (w > maxSide || h > maxSide) {
-          if (w > h) { h = Math.round(h * maxSide / w); w = maxSide; }
-          else { w = Math.round(w * maxSide / h); h = maxSide; }
-        }
-        canvas.width = w;
-        canvas.height = h;
-        var ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0, w, h);
-        callback(canvas.toDataURL("image/jpeg", 0.78));
-      };
-      img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
-  }
-
-  function requestAssistantReply(chat, imageToSend) {
-    state.isSending = true;
-    document.getElementById("sendBtn").disabled = true;
-
-    chat.messages.push({ role: "assistant", content: "Джарвис обрабатывает запрос..." });
-    renderMessages();
-
-    var apiMessages = [{ role: "system", content: state.sysPrompt }];
-    var sliceStart = Math.max(0, chat.messages.length - 7);
-    for (var i = sliceStart; i < chat.messages.length - 1; i++) {
-      apiMessages.push({
-        role: chat.messages[i].role,
-        content: chat.messages[i].content
-      });
-    }
-
-    var model = state.deepThink
-      ? "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
-      : "@cf/meta/llama-3.1-8b-instruct-fast";
-
-    var payload = {
-      model: model,
-      stream: false,
-      webSearch: state.webSearch,
-      messages: apiMessages
-    };
-    if (imageToSend) payload.image = imageToSend;
-
-    fetch(state.serverUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    })
-    .then(function(res) { return res.json(); })
-    .then(function(data) {
-      var reply = "";
-      if (data && data.choices && data.choices[0] && data.choices[0].message) {
-        reply = data.choices[0].message.content;
-      } else if (data && data.response) {
-        reply = data.response;
-      } else if (data && data.error) {
-        reply = "Ошибка сервера: " + (data.error.message || JSON.stringify(data.error));
-      } else {
-        reply = "Не удалось получить ответ от сервера, сэр.";
-      }
-      chat.messages[chat.messages.length - 1].content = reply;
-    })
-    .catch(function(err) {
-      chat.messages[chat.messages.length - 1].content = "Сбой сети: " + err.message + ". Проверьте интернет или адрес сервера.";
-    })
-    .finally(function() {
-      state.isSending = false;
-      document.getElementById("sendBtn").disabled = false;
-      saveChats();
-      renderAll();
-    });
-  }
-
-  function sendMessage() {
-    if (state.isSending) return;
-    var input = document.getElementById("promptInput");
-    var text = (input.value || "").trim();
-    var img = state.pendingImage;
-    if (!text && !img) return;
-
-    var chat = getCurrentChat();
-    if (!chat) {
-      createNewChat();
-      chat = getCurrentChat();
-    }
-
-    if (chat.messages.length === 0) {
-      chat.title = text ? text.slice(0, 32) : "Фото-запрос";
-    }
-
-    chat.messages.push({
-      role: "user",
-      content: text || "Разбери это изображение, сэр.",
-      image: img || ""
-    });
-
-    input.value = "";
-    input.style.height = "auto";
-    state.pendingImage = "";
-    document.getElementById("imgPreviewBox").classList.remove("show");
-    document.getElementById("cameraInput").value = "";
-
-    saveChats();
-    renderAll();
-    requestAssistantReply(chat, img);
-  }
-
-  function regenerateLast() {
-    if (state.isSending) return;
-    var chat = getCurrentChat();
-    if (!chat || chat.messages.length < 2) return;
-    if (chat.messages[chat.messages.length - 1].role === "assistant") {
-      chat.messages.pop();
-    }
-    var lastUser = chat.messages[chat.messages.length - 1];
-    var img = lastUser ? lastUser.image : "";
-    saveChats();
-    renderAll();
-    requestAssistantReply(chat, img);
-  }
-
-  // Bind UI events
-  document.getElementById("menuBtn").onclick = openSidebar;
-  document.getElementById("overlay").onclick = closeSidebar;
-  document.getElementById("newChatBtn").onclick = function() { createNewChat(); };
-  document.getElementById("sbNewBtn").onclick = function() { createNewChat(); closeSidebar(); };
-  document.getElementById("searchChats").oninput = renderSidebar;
-
-  document.getElementById("reasonPill").onclick = function() {
-    state.deepThink = !state.deepThink;
-    this.classList.toggle("active", state.deepThink);
-  };
-
-  document.getElementById("searchPill").onclick = function() {
-    state.webSearch = !state.webSearch;
-    this.classList.toggle("active", state.webSearch);
-  };
-
-  document.getElementById("camBtn").onclick = function() {
-    document.getElementById("cameraInput").click();
-  };
-
-  document.getElementById("cameraInput").onchange = function(ev) {
-    var file = ev.target.files && ev.target.files[0];
-    if (!file) return;
-    compressImage(file, function(dataUrl) {
-      state.pendingImage = dataUrl;
-      document.getElementById("imgPreview").src = dataUrl;
-      document.getElementById("imgPreviewBox").classList.add("show");
-    });
-  };
-
-  document.getElementById("imgRemoveBtn").onclick = function() {
-    state.pendingImage = "";
-    document.getElementById("imgPreviewBox").classList.remove("show");
-    document.getElementById("cameraInput").value = "";
-  };
-
-  document.getElementById("sendBtn").onclick = sendMessage;
-
-  var promptEl = document.getElementById("promptInput");
-  promptEl.addEventListener("input", function() {
-    this.style.height = "auto";
-    this.style.height = Math.min(this.scrollHeight, 120) + "px";
-  });
-  promptEl.addEventListener("keydown", function(e) {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  });
-
-  // Config Modal
-  document.getElementById("openCfgBtn").onclick = function() {
-    closeSidebar();
-    document.getElementById("cfgUrl").value = state.serverUrl;
-    document.getElementById("cfgSys").value = state.sysPrompt;
-    document.getElementById("cfgModal").classList.add("open");
-  };
-  document.getElementById("cfgCancel").onclick = function() {
-    document.getElementById("cfgModal").classList.remove("open");
-  };
-  document.getElementById("cfgSave").onclick = function() {
-    var u = document.getElementById("cfgUrl").value.trim();
-    var s = document.getElementById("cfgSys").value.trim();
-    if (u) { state.serverUrl = u; localStorage.setItem("jarvis_url", u); }
-    if (s) { state.sysPrompt = s; localStorage.setItem("jarvis_sys", s); }
-    document.getElementById("cfgModal").classList.remove("open");
-  };
-
-  // Always start with a fresh chat on app open
-  createNewChat();
-})();
-</script>
-</body>
-</html>
